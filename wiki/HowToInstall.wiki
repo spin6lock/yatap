@@ -1,0 +1,14 @@
+#labels Phase-Deploy
+*本文讲解如何在gae上部署该代理*
+
+=在windows环境下：=
+  #  下载[http://sdapp.googlecode.com  SDuploader] http://sdapp.googlecode.com
+  #  下载yatap的源码并解压
+  #  编辑 app.yaml 文件，然后将 application: 设置的值从“yourdomain”更改为您在google注册的应用程序 ID
+  #  参照SDuploader的[http://quke.cn/log-150.html  指南] http://quke.cn/log-150.html 进行上传
+
+
+鉴于简单起见，本代理自带了一个twitter应用，您也可自己申请twitter应用，并修改main.py的Consumer key和Consumer Secret为您申请的值。详细的twitter应用申请可自行搜索。
+
+=在Linux环境下=
+参照官方的python sdk指南进行上传即可。
