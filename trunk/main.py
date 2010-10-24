@@ -12,21 +12,37 @@ from django.utils import simplejson
 import re
 import string
 
-gtap_version = '0.4'
+yatap_version = '0.01'
 
 CONSUMER_KEY = 'B6Wv2V2OC9HY1VxRELCwg'
 CONSUMER_SECRET = '8pge4afqr6H2pfpkv7kbLS5PIatEgl06fMqk8Tstes'
 
 ENFORCE_GZIP = True
 
-gtap_message = """
+unwanted_status=['truncated','contributors','in_reply_to_user_id','in_reply_to_status_id',
+'coordinates','place','retweet_count','geo','retweeted','in_reply_to_screen_name']
+
+unwanted_user=['description','followers_count','protected',
+'location','profile_use_background_image','utc_offset',
+'profile_sidebar_fill_color','profile_text_color','follow_request_sent',
+'friends_count','created_at','time_zone','notifications','favourites_count','following','listed_count',
+'profile_background_color','profile_link_color',
+'profile_image_url','geo_enabled','profile_background_image_url',
+'lang','profile_background_tile','profile_sidebar_border_color',
+'statuses_count','url','contributors_enabled','verified','show_all_inline_media','id']
+
+unwanted_dm = ['sender', 'recipient']
+
+banClient=['Google2Tweet']
+        
+yatap_message = """
     <html>
         <head>
         <title>GAE Twitter API Proxy</title>
         <link href='https://appengine.google.com/favicon.ico' rel='shortcut icon' type='image/x-icon' />
         <style>body { padding: 20px 40px; font-family: Verdana, Helvetica, Sans-Serif; font-size: medium; }</style>
         </head>
-        <body><h2>GTAP v#gtap_version# is running!</h2></p>
+        <body><h2>yatap v#yatap_version# is running!</h2></p>
         <p><a href='/oauth/session'><img src='/static/sign-in-with-twitter.png' border='0'></a> <== Need Fuck GFW First!! 
         or <a href='/oauth/change'>change your key here</a></p>
         <p>This is a simple solution on Google App Engine which can proxy the HTTP request to twitter's official REST API url.</p>
@@ -36,15 +52,15 @@ gtap_message = """
 
 def success_output(handler, content, content_type='text/html'):
     handler.response.status = '200 OK'
-    handler.response.headers.add_header('GTAP-Version', gtap_version)
+    handler.response.headers.add_header('yatap-Version', yatap_version)
     handler.response.headers.add_header('Content-Type', content_type)
     handler.response.out.write(content)
 
 def error_output(handler, content, content_type='text/html', status=503):
     handler.response.set_status(503)
-    handler.response.headers.add_header('GTAP-Version', gtap_version)
+    handler.response.headers.add_header('yatap-Version', yatap_version)
     handler.response.headers.add_header('Content-Type', content_type)
-    handler.response.out.write("Gtap Server Error:<br />")
+    handler.response.out.write("yatap Server Error:<br />")
     return handler.response.out.write(content)
 
 def compress_buf(buf):
@@ -62,17 +78,9 @@ class TextOnly(webapp.RequestHandler):
 
     def statuse_filter(self,content):
         statuses=simplejson.loads(content)
-        unwanted_status=['truncated','contributors','in_reply_to_user_id','in_reply_to_status_id',
-'coordinates','place','retweet_count','geo','retweeted','in_reply_to_screen_name']
-        unwanted_user=['description','followers_count','protected',
-'location','profile_use_background_image','utc_offset',
-'profile_sidebar_fill_color','profile_text_color','follow_request_sent',
-'friends_count','created_at','time_zone','notifications','favourites_count','following','listed_count',
-'profile_background_color','profile_link_color',
-'profile_image_url','geo_enabled','profile_background_image_url',
-'lang','profile_background_tile','profile_sidebar_border_color',
-'statuses_count','url','contributors_enabled','verified','show_all_inline_media','id']
-        banClient=['Google2Tweet']
+        global unwanted_status
+        global unwanted_user
+        global banClient
         for statuse in statuses:
             statuse['source']=remove_html_tags(statuse['source'])
             for key in unwanted_status:
@@ -85,7 +93,7 @@ class TextOnly(webapp.RequestHandler):
         return statuses
         
     def directMsg_filter(self,content):
-        unwanted_dm = ['sender', 'recipient']
+        global unwanted_dm
         directmessages = simplejson.loads(content)
         for dm in directmessages:
             for key in unwanted_dm:
@@ -131,9 +139,9 @@ class TextOnly(webapp.RequestHandler):
         new_url,new_path = self.conver_url(orig_url)
 
         if new_path == '/' or new_path == '':
-            global gtap_message
-            gtap_message = gtap_message.replace('#gtap_version#', gtap_version)
-            return success_output(self, gtap_message )
+            global yatap_message
+            yatap_message = yatap_message.replace('#yatap_version#', yatap_version)
+            return success_output(self, yatap_message )
         
         username, password = self.parse_auth_header(self.request.headers)
         user_access_token = None
@@ -163,12 +171,14 @@ class TextOnly(webapp.RequestHandler):
             error_output(self, content=error_message)
         else :
             #logging.debug(data.headers)
-            self.response.headers.add_header('GTAP-Version', gtap_version)
+            self.response.headers.add_header('yatap-Version', yatap_version)
             for res_name, res_value in data.headers.items():
                 if is_hop_by_hop(res_name) is False and res_name!='status':
                     self.response.headers.add_header(res_name, res_value)
             if method=='POST':
-                self.response.out.write(data.content)
+                content=simplejson.loads(data.content)
+                content=content['text']
+                self.response.out.write(simplejson.dumps(content))
             else:
                 #filter here
                 if string.find(orig_url,"direct")!=-1:
@@ -223,9 +233,9 @@ class MainPage(webapp.RequestHandler):
         new_url,new_path = self.conver_url(orig_url)
 
         if new_path == '/' or new_path == '':
-            global gtap_message
-            gtap_message = gtap_message.replace('#gtap_version#', gtap_version)
-            return success_output(self, gtap_message )
+            global yatap_message
+            yatap_message = yatap_message.replace('#yatap_version#', yatap_version)
+            return success_output(self, yatap_message )
         
         username, password = self.parse_auth_header(self.request.headers)
         user_access_token = None
@@ -255,7 +265,7 @@ class MainPage(webapp.RequestHandler):
             error_output(self, content=error_message)
         else :
             #logging.debug(data.headers)
-            self.response.headers.add_header('GTAP-Version', gtap_version)
+            self.response.headers.add_header('yatap-Version', yatap_version)
             for res_name, res_value in data.headers.items():
                 if is_hop_by_hop(res_name) is False and res_name!='status':
                     self.response.headers.add_header(res_name, res_value)
@@ -310,7 +320,7 @@ class OauthPage(webapp.RequestHandler):
             screen_name = self.request.get("name")
             self_key = self.request.get("key")
             out_message = """
-                <html><head><title>GTAP</title>
+                <html><head><title>yatap</title>
                 <style>body { padding: 20px 40px; font-family: Courier New; font-size: medium; }</style>
                 </head><body><p><form method="post" action="%s/oauth/changekey">
                 screen name : <input type="text" name="name" size="20" value="%s"> <br /><br />
