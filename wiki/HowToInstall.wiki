@@ -12,3 +12,5 @@
 
 =在Linux环境下=
 参照官方的python sdk指南进行上传即可。
+
+注意，设置api地址的时候应该设置为http://yourappname.appspot.com/text/，方可获得纯文字版过滤。
